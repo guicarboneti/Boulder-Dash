@@ -74,6 +74,7 @@ ALLEGRO_SAMPLE* boom;
 ALLEGRO_SAMPLE* lose;
 ALLEGRO_SAMPLE* score;
 ALLEGRO_SAMPLE* menu;
+ALLEGRO_SAMPLE* menu_select;
 
 void audio_init()
 {
@@ -82,13 +83,14 @@ void audio_init()
   al_reserve_samples(128);
 
   coin = al_load_sample("coin.wav");
-  dig = al_load_sample("sfx_step_grass_l.flac");
+  dig = al_load_sample("dig.flac");
   boulder = al_load_sample("boulder.wav");
   coin_fall = al_load_sample("coin-fall.wav");
-  boom = al_load_sample("atari_boom.wav");
+  boom = al_load_sample("boom.wav");
   lose = al_load_sample("lose.wav");
   score = al_load_sample("score.wav");
   menu = al_load_sample("menu.wav");
+  menu_select = al_load_sample("menu_select.wav");
 
   must_init(coin, "coin sample");
   must_init(dig, "dig sample");
@@ -97,7 +99,8 @@ void audio_init()
   must_init(boom, "boom sample");
   must_init(lose, "lose sample");
   must_init(score, "score sample");
-  must_init(menu, "score sample");
+  must_init(menu, "menu sample");
+  must_init(menu_select, "menu select sample");
 }
 
 void audio_deinit()
@@ -110,6 +113,7 @@ void audio_deinit()
   al_destroy_sample(lose);
   al_destroy_sample(score);
   al_destroy_sample(menu);
+  al_destroy_sample(menu_select);
 }
 
 typedef struct SPRITES
@@ -268,17 +272,17 @@ typedef struct MAP
 typedef struct GAME
 {
   long frames;
-  long score;
+  long score[2];
   int coins, door_coins, pts_per_coin, pts_gain;
   bool done, die, finish, restart, pause;
-  int smoke_index, time;
+  int smoke_index, time, current_score;
   int pause_set[2][3];
+  int map;
 } GAME;
 
 void objects_init(MAP *map, OBJECT *boulders, COORDINATE *hero, OBJECT *jewels, GAME *game)
 {
   game->frames = 0;
-  game->score = 0;
   game->coins = 0;
   game->smoke_index = 0;
   game->restart = false;
@@ -314,11 +318,15 @@ void objects_init(MAP *map, OBJECT *boulders, COORDINATE *hero, OBJECT *jewels, 
   FILE *fp;
   int c;
 
-  fp = fopen("map_coordinates.txt", "r");
-    if (!fp) {
-      fprintf(stderr, "Nao foi possivel abrir o arquivo '%s'\n", "map_coordinates.txt");
-      exit(1);
-    }
+  if (game->map == 1) {
+    fp = fopen("map_coordinates.txt", "r");
+    must_init(fp, "map.coordinates.txt");
+  }
+  else if (game->map == 2) {
+    fp = fopen("map2_coordinates.txt", "r");
+    must_init(fp, "map2.coordinates.txt");
+  }
+
 
     //check for comments
     c = getc(fp);
@@ -425,7 +433,7 @@ void draw_map(MAP *map, COORDINATE *hero, GAME *game)
           else al_draw_bitmap(sprites.hero[0][0], i*OBJECT_W, (j*OBJECT_H)+OBJECT_H, 0);
           break;
         case DOOR:
-          if (game->coins > 11)
+          if (game->coins >= game->door_coins)
             al_draw_bitmap(sprites.door, i*OBJECT_W, (j*OBJECT_H)+OBJECT_H, 0);
           else
             al_draw_bitmap(sprites.border, i*OBJECT_W, (j*OBJECT_H)+OBJECT_H, 0);
@@ -449,20 +457,38 @@ void draw_map(MAP *map, COORDINATE *hero, GAME *game)
       ALLEGRO_ALIGN_CENTER,
       "P A U S E D"
     );
-    if (game->pause_set[0][0])
-      al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W-3 , (BUFFER_H/4)+OBJECT_H-3, (3*(BUFFER_W/4))-OBJECT_W+3, (BUFFER_H/4)+ 4*OBJECT_H+3, al_map_rgb(140,140,140));
-    else al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W , (BUFFER_H/4)+OBJECT_H, (3*(BUFFER_W/4))-OBJECT_W, (BUFFER_H/4)+ 4*OBJECT_H, al_map_rgb(102,102,102));
-    al_draw_text(font, al_map_rgb_f(0,0,0), (BUFFER_W/4)+10*OBJECT_W, (BUFFER_H/4)+(2.3*OBJECT_H), ALLEGRO_ALIGN_CENTER, "R E S U M E");
+    if (!game->pause_set[1][1]) {
+      if (game->pause_set[0][0])
+        al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W-3 , (BUFFER_H/4)+OBJECT_H-3, (3*(BUFFER_W/4))-OBJECT_W+3, (BUFFER_H/4)+ 4*OBJECT_H+3, al_map_rgb(140,140,140));
+      else al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W , (BUFFER_H/4)+OBJECT_H, (3*(BUFFER_W/4))-OBJECT_W, (BUFFER_H/4)+ 4*OBJECT_H, al_map_rgb(102,102,102));
+      al_draw_text(font, al_map_rgb_f(0,0,0), (BUFFER_W/4)+10*OBJECT_W, (BUFFER_H/4)+(2.3*OBJECT_H), ALLEGRO_ALIGN_CENTER, "R E S U M E");
 
-    if (game->pause_set[0][1])
-      al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W-3 , ((BUFFER_H/4)+(5*OBJECT_H)-(OBJECT_H/2)-3), (3*(BUFFER_W/4))-OBJECT_W+3, ((BUFFER_H/4)+(8*OBJECT_H)-(OBJECT_H/2))+3, al_map_rgb(140,140,140));
-    else al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W , ((BUFFER_H/4)+(5*OBJECT_H)-(OBJECT_H/2)), (3*(BUFFER_W/4))-OBJECT_W, ((BUFFER_H/4)+(8*OBJECT_H)-(OBJECT_H/2)), al_map_rgb(102,102,102));
-    al_draw_text(font, al_map_rgb_f(0,0,0), (BUFFER_W/4)+10*OBJECT_W, ((BUFFER_H/4)+(5.7*OBJECT_H)), ALLEGRO_ALIGN_CENTER, "I N S T R U C T I O N S");
+      if (game->pause_set[0][1])
+        al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W-3 , ((BUFFER_H/4)+(5*OBJECT_H)-(OBJECT_H/2)-3), (3*(BUFFER_W/4))-OBJECT_W+3, ((BUFFER_H/4)+(8*OBJECT_H)-(OBJECT_H/2))+3, al_map_rgb(140,140,140));
+      else al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W , ((BUFFER_H/4)+(5*OBJECT_H)-(OBJECT_H/2)), (3*(BUFFER_W/4))-OBJECT_W, ((BUFFER_H/4)+(8*OBJECT_H)-(OBJECT_H/2)), al_map_rgb(102,102,102));
+      al_draw_text(font, al_map_rgb_f(0,0,0), (BUFFER_W/4)+10*OBJECT_W, ((BUFFER_H/4)+(5.7*OBJECT_H)), ALLEGRO_ALIGN_CENTER, "I N S T R U C T I O N S");
 
-    if (game->pause_set[0][2])
-      al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W-3 , ((BUFFER_H/4)+(8*OBJECT_H))-3, (3*(BUFFER_W/4))-OBJECT_W+3, ((BUFFER_H/4)+(11*OBJECT_H))+3, al_map_rgb(140,140,140));
-    else al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W , ((BUFFER_H/4)+(8*OBJECT_H)), (3*(BUFFER_W/4))-OBJECT_W, ((BUFFER_H/4)+(11*OBJECT_H)), al_map_rgb(102,102,102));
-    al_draw_text(font, al_map_rgb_f(0,0,0), (BUFFER_W/4)+10*OBJECT_W, ((BUFFER_H/4)+(9.3*OBJECT_H)), ALLEGRO_ALIGN_CENTER, "E X I T  G A M E");
+      if (game->pause_set[0][2])
+        al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W-3 , ((BUFFER_H/4)+(8*OBJECT_H))-3, (3*(BUFFER_W/4))-OBJECT_W+3, ((BUFFER_H/4)+(11*OBJECT_H))+3, al_map_rgb(140,140,140));
+      else al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W , ((BUFFER_H/4)+(8*OBJECT_H)), (3*(BUFFER_W/4))-OBJECT_W, ((BUFFER_H/4)+(11*OBJECT_H)), al_map_rgb(102,102,102));
+      al_draw_text(font, al_map_rgb_f(0,0,0), (BUFFER_W/4)+10*OBJECT_W, ((BUFFER_H/4)+(9.3*OBJECT_H)), ALLEGRO_ALIGN_CENTER, "E X I T  G A M E");
+    
+      al_draw_text(font, al_map_rgb_f(1,1,1), BUFFER_W-7*OBJECT_W, 2*OBJECT_H, ALLEGRO_ALIGN_CENTER, "CURRENT BEST SCORE");
+      al_draw_textf(font, al_map_rgb_f(1,1,1), BUFFER_W-7*OBJECT_W, 3*OBJECT_H, ALLEGRO_ALIGN_CENTER, "%d POINTS", game->current_score);
+    }
+
+    else {
+      if (game->frames % 100 != 0)
+        al_draw_text(font, al_map_rgb_f(1,1,1), 2*OBJECT_W, 2*OBJECT_H, 0, "ESC TO RETURN");
+
+      al_draw_text(font, al_map_rgb_f(1,1,1), (BUFFER_W/4)+10*OBJECT_W, (BUFFER_H/4)+(1.3*OBJECT_H), ALLEGRO_ALIGN_CENTER, "MOVE ROCKFORD WITH ARROW KEYS OR WASD");
+      al_draw_text(font, al_map_rgb_f(1,1,1), (BUFFER_W/4)+10*OBJECT_W, (BUFFER_H/4)+(2.3*OBJECT_H), ALLEGRO_ALIGN_CENTER, "AND TRY TO REACH THE DOOR.");
+      al_draw_text(font, al_map_rgb_f(1,1,1), (BUFFER_W/4)+10*OBJECT_W, (BUFFER_H/4)+(4.3*OBJECT_H), ALLEGRO_ALIGN_CENTER, "PICK UP ALL THE JEWELS YOU CAN");
+      al_draw_text(font, al_map_rgb_f(1,1,1), (BUFFER_W/4)+10*OBJECT_W, (BUFFER_H/4)+(5.3*OBJECT_H), ALLEGRO_ALIGN_CENTER, "AND AVOID GETTING HIT BY THE ROCKS!");
+      al_draw_text(font, al_map_rgb_f(1,1,1), (BUFFER_W/4)+10*OBJECT_W, (BUFFER_H/4)+(7.3*OBJECT_H), ALLEGRO_ALIGN_CENTER, "THE TIME IS YOUR ENEMY, GOOD LUCK!");
+      al_draw_text(font, al_map_rgb_f(1,1,1), (BUFFER_W/4)+10*OBJECT_W, (BUFFER_H/4)+(10.3*OBJECT_H), ALLEGRO_ALIGN_CENTER, "GAME DEVELOPED BY GUILHERME CARBONARI BONETI");
+      al_draw_text(font, al_map_rgb_f(1,1,1), (BUFFER_W/4)+10*OBJECT_W, (BUFFER_H/4)+(11.3*OBJECT_H), ALLEGRO_ALIGN_CENTER, "MARCH, 2021");
+    }
   }
 }
 
@@ -472,7 +498,7 @@ void hero_update(ALLEGRO_EVENT* event, MAP *map, COORDINATE *hero, OBJECT *bould
     for (int i=0; i<boulders->size; i++) {
       if (hero->x == boulders->el[i].x && hero->y == boulders->el[i].y+1) {
         if (boulders->el[i].falling) {
-          al_play_sample(boom, 1, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
+          al_play_sample(boom, 0.5, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
           game->restart = true;
         }
         break;
@@ -483,7 +509,7 @@ void hero_update(ALLEGRO_EVENT* event, MAP *map, COORDINATE *hero, OBJECT *bould
     for (int i=0; i<jewels->size; i++) {
       if (hero->x == jewels->el[i].x && hero->y == jewels->el[i].y+1) {
         if (jewels->el[i].falling) {
-          al_play_sample(boom, 1, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
+          al_play_sample(boom, 0.5, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
           game->restart = true;
         }
         break;
@@ -516,9 +542,9 @@ void hero_update(ALLEGRO_EVENT* event, MAP *map, COORDINATE *hero, OBJECT *bould
           break;
         case JEWEL:
           if (game->coins < game->door_coins)
-            game->score = game->score + game->pts_per_coin;
+            game->score[game->map-1] = game->score[game->map-1] + game->pts_per_coin;
           else
-            game->score = game->score + game->pts_per_coin + game->pts_gain;
+            game->score[game->map-1] = game->score[game->map-1] + game->pts_per_coin + game->pts_gain;
           game->coins++;
           map->el[hero->x][hero->y].show = false;
           map->el[hero->x][hero->y-1].type = HERO;
@@ -565,9 +591,9 @@ void hero_update(ALLEGRO_EVENT* event, MAP *map, COORDINATE *hero, OBJECT *bould
           break;
         case JEWEL:
           if (game->coins < game->door_coins)
-            game->score = game->score + game->pts_per_coin;
+            game->score[game->map-1] = game->score[game->map-1] + game->pts_per_coin;
           else
-            game->score = game->score + game->pts_per_coin + game->pts_gain;
+            game->score[game->map-1] = game->score[game->map-1] + game->pts_per_coin + game->pts_gain;
           game->coins++;
           al_play_sample(coin, 1, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
           map->el[hero->x][hero->y].show = false;
@@ -613,9 +639,9 @@ void hero_update(ALLEGRO_EVENT* event, MAP *map, COORDINATE *hero, OBJECT *bould
           break;
         case JEWEL:
           if (game->coins < game->door_coins)
-            game->score = game->score + game->pts_per_coin;
+            game->score[game->map-1] = game->score[game->map-1] + game->pts_per_coin;
           else
-            game->score = game->score + game->pts_per_coin + game->pts_gain;
+            game->score[game->map-1] = game->score[game->map-1] + game->pts_per_coin + game->pts_gain;
           game->coins++;
           al_play_sample(coin, 1, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
           map->el[hero->x][hero->y].show = false;
@@ -676,9 +702,9 @@ void hero_update(ALLEGRO_EVENT* event, MAP *map, COORDINATE *hero, OBJECT *bould
           break;
         case JEWEL:
           if (game->coins < game->door_coins)
-            game->score = game->score + game->pts_per_coin;
+            game->score[game->map-1] = game->score[game->map-1] + game->pts_per_coin;
           else
-            game->score = game->score + game->pts_per_coin + game->pts_gain;
+            game->score[game->map-1] = game->score[game->map-1] + game->pts_per_coin + game->pts_gain;
           game->coins++;
           al_play_sample(coin, 1, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
           map->el[hero->x][hero->y].show = false;
@@ -821,7 +847,7 @@ void hud_deinit()
 void hud_update(GAME *game)
 {
   if(game->finish && game->frames % 2 == 0 && game->time > 0) {
-    game->score++;
+    game->score[game->map-1]++;
     game->time--;
     al_play_sample(score, 1, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
   }
@@ -878,13 +904,17 @@ void hud_draw(GAME *game)
     "%03d",
     game->time
   );
+
+  long sum=0;
+  for (int i=game->map-1;i>=0;i--)
+    sum = sum + game->score[i];
   al_draw_textf(
     font,
     al_map_rgb_f(1,1,1),
     383, 3,
     0,
     "%06ld",
-    game->score
+    sum
   );
 }
 
@@ -923,6 +953,25 @@ int main()
   MAP map;
   GAME game;
 
+  game.map=1;
+  game.score[0]=0;
+
+  // read current best score
+  FILE *score_file ;
+  int c;
+  score_file = fopen ("record.txt", "r") ;
+  must_init(score_file, "record.txt");
+    //check for comments
+    c = getc(score_file);
+    while (c == '#') {
+      while (getc(score_file) != '\n') ;
+      c = getc(score_file);
+    }
+    ungetc(c, score_file);
+
+    fscanf(score_file, "%d", &game.current_score);
+  fclose (score_file) ;
+
   hud_init(&game);
   
   objects_init(&map, &boulders, &hero, &jewels, &game);
@@ -939,9 +988,15 @@ int main()
     switch(event.type)
     {
       case ALLEGRO_EVENT_TIMER:
-        if (game.time == 0 && !game.finish) {
+        if (game.time == 0 && game.finish) {
+          game.map++;
+          game.finish = false;
+          objects_init(&map, &boulders, &hero, &jewels, &game);
+        }
+        if (game.time == 0 && !game.finish && !game.restart) {
           game.restart = true;
-          // al_play_sample(boom, 1, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
+          game.score[game.map-1] = 0;
+          al_play_sample(boom, 0.5, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
         }
         else if (game.frames % 60 == 0 && !game.finish && !game.pause)
           game.time--;
@@ -955,6 +1010,7 @@ int main()
             al_play_sample(lose, 1, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
             objects_init(&map, &boulders, &hero, &jewels, &game);
           }
+          game.score[game.map-1]=0;
         }
           if (game.frames % 20 == 0) {
           hero.left=0;
@@ -990,8 +1046,21 @@ int main()
           }
           al_play_sample(menu, 0.3, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
         }
-        if (event.keyboard.keycode == ALLEGRO_KEY_ENTER && game.pause && game.pause_set[0][0])
-          game.pause = false;
+        if (event.keyboard.keycode == ALLEGRO_KEY_ENTER && game.pause) {
+          if (game.pause_set[0][0])
+            game.pause = false;
+          else if (game.pause_set[0][1])
+            game.pause_set[1][1] = 1;
+          else if (game.pause_set[0][2])
+            game.done = true;
+          al_play_sample(menu_select, 0.3, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
+        }
+
+        if (event.keyboard.keycode == ALLEGRO_KEY_ESCAPE && game.pause && game.pause_set[1][1]) {
+          game.pause_set[1][1] = false;
+          al_play_sample(menu, 0.3, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
+          break;
+        }
 
         if (game.smoke_index == 0 && !game.finish && !game.pause) {
           hero_update(&event, &map, &hero, &boulders, &jewels, &game);
@@ -1002,7 +1071,7 @@ int main()
 
         redraw = true;
         game.frames++;
-        if(event.keyboard.keycode != ALLEGRO_KEY_ESCAPE)
+        if((event.keyboard.keycode != ALLEGRO_KEY_ESCAPE) || game.pause_set[1][1])
           break;
 
       case ALLEGRO_EVENT_DISPLAY_CLOSE:
@@ -1036,29 +1105,13 @@ int main()
 
 
   // atualiza o arquivo contendo o recorde do usuário
-  FILE *score_file ;
-  int c, actual;
-  score_file = fopen ("record.txt", "r") ;
-    if ( ! score_file )
-    {
-      perror ("Erro ao abrir/criar arquivo") ;
-      exit (1) ;
-    }
-    //check for comments
-    c = getc(score_file);
-    while (c == '#') {
-      while (getc(score_file) != '\n') ;
-      c = getc(score_file);
-    }
-    ungetc(c, score_file);
-
-    fscanf(score_file, "%d", &actual);
-  fclose (score_file) ;
-
-  if (actual < game.score) {
+  long sum=0;
+  for (int i=game.map-1; i>=0; i--)
+    sum = sum + game.score[i];
+  if (game.current_score < sum) {
     score_file = fopen ("record.txt", "w") ;
       fputs("# USER RECORD\n", score_file);
-      fprintf (score_file, "%ld", game.score);
+      fprintf (score_file, "%ld", sum);
     fclose (score_file) ;
   }
 
