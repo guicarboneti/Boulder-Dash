@@ -73,6 +73,7 @@ ALLEGRO_SAMPLE* coin_fall;
 ALLEGRO_SAMPLE* boom;
 ALLEGRO_SAMPLE* lose;
 ALLEGRO_SAMPLE* score;
+ALLEGRO_SAMPLE* menu;
 
 void audio_init()
 {
@@ -87,6 +88,7 @@ void audio_init()
   boom = al_load_sample("atari_boom.wav");
   lose = al_load_sample("lose.wav");
   score = al_load_sample("score.wav");
+  menu = al_load_sample("menu.wav");
 
   must_init(coin, "coin sample");
   must_init(dig, "dig sample");
@@ -95,6 +97,7 @@ void audio_init()
   must_init(boom, "boom sample");
   must_init(lose, "lose sample");
   must_init(score, "score sample");
+  must_init(menu, "score sample");
 }
 
 void audio_deinit()
@@ -106,6 +109,7 @@ void audio_deinit()
   al_destroy_sample(boom);
   al_destroy_sample(lose);
   al_destroy_sample(score);
+  al_destroy_sample(menu);
 }
 
 typedef struct SPRITES
@@ -268,6 +272,7 @@ typedef struct GAME
   int coins, door_coins, pts_per_coin, pts_gain;
   bool done, die, finish, restart, pause;
   int smoke_index, time;
+  int pause_set[2][3];
 } GAME;
 
 void objects_init(MAP *map, OBJECT *boulders, COORDINATE *hero, OBJECT *jewels, GAME *game)
@@ -281,6 +286,10 @@ void objects_init(MAP *map, OBJECT *boulders, COORDINATE *hero, OBJECT *jewels, 
   game->die = false;
   game->done = false;
   game->pause = false;
+  
+  for (int i=0;i<2;i++)
+    for (int j=0;j<3;j++)
+      game->pause_set[i][j] = 0;
 
   for (int i=0;i<N_OBJ_W;i++) {
     for (int j=0;j<N_OBJ_H;j++) {
@@ -440,13 +449,19 @@ void draw_map(MAP *map, COORDINATE *hero, GAME *game)
       ALLEGRO_ALIGN_CENTER,
       "P A U S E D"
     );
-    al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W , (BUFFER_H/4)+OBJECT_H, (3*(BUFFER_W/4))-OBJECT_W, (BUFFER_H/4)+ 4*OBJECT_H, al_map_rgb(102,102,102));
+    if (game->pause_set[0][0])
+      al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W-3 , (BUFFER_H/4)+OBJECT_H-3, (3*(BUFFER_W/4))-OBJECT_W+3, (BUFFER_H/4)+ 4*OBJECT_H+3, al_map_rgb(140,140,140));
+    else al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W , (BUFFER_H/4)+OBJECT_H, (3*(BUFFER_W/4))-OBJECT_W, (BUFFER_H/4)+ 4*OBJECT_H, al_map_rgb(102,102,102));
     al_draw_text(font, al_map_rgb_f(0,0,0), (BUFFER_W/4)+10*OBJECT_W, (BUFFER_H/4)+(2.3*OBJECT_H), ALLEGRO_ALIGN_CENTER, "R E S U M E");
 
-    al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W , ((BUFFER_H/4)+(5*OBJECT_H)-(OBJECT_H/2)), (3*(BUFFER_W/4))-OBJECT_W, ((BUFFER_H/4)+(8*OBJECT_H)-(OBJECT_H/2)), al_map_rgb(102,102,102));
+    if (game->pause_set[0][1])
+      al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W-3 , ((BUFFER_H/4)+(5*OBJECT_H)-(OBJECT_H/2)-3), (3*(BUFFER_W/4))-OBJECT_W+3, ((BUFFER_H/4)+(8*OBJECT_H)-(OBJECT_H/2))+3, al_map_rgb(140,140,140));
+    else al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W , ((BUFFER_H/4)+(5*OBJECT_H)-(OBJECT_H/2)), (3*(BUFFER_W/4))-OBJECT_W, ((BUFFER_H/4)+(8*OBJECT_H)-(OBJECT_H/2)), al_map_rgb(102,102,102));
     al_draw_text(font, al_map_rgb_f(0,0,0), (BUFFER_W/4)+10*OBJECT_W, ((BUFFER_H/4)+(5.7*OBJECT_H)), ALLEGRO_ALIGN_CENTER, "I N S T R U C T I O N S");
 
-    al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W , ((BUFFER_H/4)+(8*OBJECT_H)), (3*(BUFFER_W/4))-OBJECT_W, ((BUFFER_H/4)+(11*OBJECT_H)), al_map_rgb(102,102,102));
+    if (game->pause_set[0][2])
+      al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W-3 , ((BUFFER_H/4)+(8*OBJECT_H))-3, (3*(BUFFER_W/4))-OBJECT_W+3, ((BUFFER_H/4)+(11*OBJECT_H))+3, al_map_rgb(140,140,140));
+    else al_draw_filled_rectangle((BUFFER_W/4)+OBJECT_W , ((BUFFER_H/4)+(8*OBJECT_H)), (3*(BUFFER_W/4))-OBJECT_W, ((BUFFER_H/4)+(11*OBJECT_H)), al_map_rgb(102,102,102));
     al_draw_text(font, al_map_rgb_f(0,0,0), (BUFFER_W/4)+10*OBJECT_W, ((BUFFER_H/4)+(9.3*OBJECT_H)), ALLEGRO_ALIGN_CENTER, "E X I T  G A M E");
   }
 }
@@ -476,7 +491,7 @@ void hero_update(ALLEGRO_EVENT* event, MAP *map, COORDINATE *hero, OBJECT *bould
     }
   }
 
-  if(event->keyboard.keycode == ALLEGRO_KEY_UP) {
+  if(event->keyboard.keycode == ALLEGRO_KEY_UP || event->keyboard.keycode == ALLEGRO_KEY_W) {
     hero->left=0;
     hero->right++;
     if (hero->right > 6)
@@ -525,7 +540,7 @@ void hero_update(ALLEGRO_EVENT* event, MAP *map, COORDINATE *hero, OBJECT *bould
       }
     }
   }
-  if(event->keyboard.keycode == ALLEGRO_KEY_DOWN) {
+  if(event->keyboard.keycode == ALLEGRO_KEY_DOWN || event->keyboard.keycode == ALLEGRO_KEY_S) {
     hero->right=0;
     hero->left++;
     if (hero->left > 6)
@@ -574,7 +589,7 @@ void hero_update(ALLEGRO_EVENT* event, MAP *map, COORDINATE *hero, OBJECT *bould
       }
     }
   }
-  if(event->keyboard.keycode == ALLEGRO_KEY_LEFT) {
+  if(event->keyboard.keycode == ALLEGRO_KEY_LEFT || event->keyboard.keycode == ALLEGRO_KEY_A) {
     hero->right=0;
     hero->left++;
     if (hero->left > 6)
@@ -637,7 +652,7 @@ void hero_update(ALLEGRO_EVENT* event, MAP *map, COORDINATE *hero, OBJECT *bould
       }
     }
   }
-  if(event->keyboard.keycode == ALLEGRO_KEY_RIGHT) {
+  if(event->keyboard.keycode == ALLEGRO_KEY_RIGHT || event->keyboard.keycode == ALLEGRO_KEY_D) {
     hero->left=0;
     hero->right++;
     if (hero->right > 6)
@@ -948,8 +963,35 @@ int main()
 
       case ALLEGRO_EVENT_KEY_CHAR:
 
-        if(event.keyboard.keycode == ALLEGRO_KEY_H || event.keyboard.keycode == ALLEGRO_KEY_F1)
-          game.pause = true;
+        if(event.keyboard.keycode == ALLEGRO_KEY_H || event.keyboard.keycode == ALLEGRO_KEY_F1) {
+          game.pause = !game.pause;
+          game.pause_set[0][0] = 1;
+        }
+
+        if((event.keyboard.keycode == ALLEGRO_KEY_UP  || event.keyboard.keycode == ALLEGRO_KEY_W) && game.pause) {
+          if (game.pause_set[0][1] == 1) {
+            game.pause_set[0][1] = 0;
+            game.pause_set[0][0] = 1;
+          }
+          else if (game.pause_set[0][2] == 1) {
+            game.pause_set[0][2] = 0;
+            game.pause_set[0][1] = 1;
+          }
+          al_play_sample(menu, 0.3, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
+        }
+        if((event.keyboard.keycode == ALLEGRO_KEY_DOWN || event.keyboard.keycode == ALLEGRO_KEY_S) && game.pause) {
+          if (game.pause_set[0][0] == 1) {
+            game.pause_set[0][0] = 0;
+            game.pause_set[0][1] = 1;
+          }
+          else if (game.pause_set[0][1] == 1) {
+            game.pause_set[0][1] = 0;
+            game.pause_set[0][2] = 1;
+          }
+          al_play_sample(menu, 0.3, 0, 1, ALLEGRO_PLAYMODE_ONCE, NULL);
+        }
+        if (event.keyboard.keycode == ALLEGRO_KEY_ENTER && game.pause && game.pause_set[0][0])
+          game.pause = false;
 
         if (game.smoke_index == 0 && !game.finish && !game.pause) {
           hero_update(&event, &map, &hero, &boulders, &jewels, &game);
