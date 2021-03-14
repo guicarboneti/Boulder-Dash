@@ -55,17 +55,17 @@ void audio_init()
   al_init_acodec_addon();
   al_reserve_samples(128);
 
-  coin = al_load_sample("coin.wav");
-  dig = al_load_sample("dig.flac");
-  boulder = al_load_sample("boulder.wav");
-  coin_fall = al_load_sample("coin-fall.wav");
-  boom = al_load_sample("boom.wav");
-  lose = al_load_sample("lose.wav");
-  score = al_load_sample("score.wav");
-  menu = al_load_sample("menu.wav");
-  menu_select = al_load_sample("menu_select.wav");
-  cheat = al_load_sample("cheat.ogg");
-  win = al_load_sample("win.flac");
+  coin = al_load_sample("./resources/coin.wav");
+  dig = al_load_sample("./resources/dig.flac");
+  boulder = al_load_sample("./resources/boulder.wav");
+  coin_fall = al_load_sample("./resources/coin-fall.wav");
+  boom = al_load_sample("./resources/boom.wav");
+  lose = al_load_sample("./resources/lose.wav");
+  score = al_load_sample("./resources/score.wav");
+  menu = al_load_sample("./resources/menu.wav");
+  menu_select = al_load_sample("./resources/menu_select.wav");
+  cheat = al_load_sample("./resources/cheat.ogg");
+  win = al_load_sample("./resources/win.flac");
 
   must_init(coin, "coin sample");
   must_init(dig, "dig sample");
@@ -109,7 +109,7 @@ ALLEGRO_BITMAP* sprite_grab_smoke(int x, int y, int w, int h)
 }
 
 void image_init() {
-  infinite = al_load_bitmap("infinite.png");
+  infinite = al_load_bitmap("./resources/infinite.png");
   must_init(infinite, "infinite");
 }
 void image_deinit()
@@ -119,7 +119,7 @@ void image_deinit()
 
 void sprites_init()
 {
-  sprites._sheet = al_load_bitmap("tileset.png");
+  sprites._sheet = al_load_bitmap("./resources/tileset.png");
   must_init(sprites._sheet, "spritesheet");
 
   sprites.border = sprite_grab(228, 36, OBJECT_W, OBJECT_H);
@@ -150,7 +150,7 @@ void sprites_init()
   sprites.hero[1][2] = sprite_grab(120, 156, OBJECT_W, OBJECT_H);
   sprites.hero[0][2] = sprite_grab(132, 156, OBJECT_W, OBJECT_H);
 
-  sprites.smoke_sheet = al_load_bitmap("smoke.png");
+  sprites.smoke_sheet = al_load_bitmap("./resources/smoke.png");
   must_init(sprites._sheet, "spritesheet");
 
   sprites.smoke[0] = sprite_grab_smoke(0, 0, 16, 16);
@@ -247,11 +247,11 @@ void objects_init(MAP *map, OBJECT *boulders, COORDINATE *hero, OBJECT *jewels, 
   int c;
 
   if (game->map == 1) {
-    fp = fopen("map_coordinates.txt", "r");
+    fp = fopen("./resources/map_coordinates.txt", "r");
     must_init(fp, "map.coordinates.txt");
   }
   else if (game->map == 2) {
-    fp = fopen("map2_coordinates.txt", "r");
+    fp = fopen("./resources/map2_coordinates.txt", "r");
     must_init(fp, "map2.coordinates.txt");
   }
 

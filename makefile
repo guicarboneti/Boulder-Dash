@@ -6,6 +6,8 @@ LDFLAGS = -std=c99 `pkg-config allegro-5 allegro_font-5 allegro_primitives-5 all
 # object-file
 objects = game.o
 
+all: boulder_dash
+
 boulder_dash: boulder_dash.c $(objects)
 	gcc boulder_dash.c -o boulder_dash $(objects) $(CFLAGS) $(LDFLAGS)
 game.o: game.c game.h

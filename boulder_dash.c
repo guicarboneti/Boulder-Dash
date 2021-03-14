@@ -64,7 +64,7 @@ int main()
   // read current best score
   FILE *score_file ;
   int c;
-  score_file = fopen ("record.txt", "r") ;
+  score_file = fopen ("./resources/record.txt", "r") ;
   must_init(score_file, "record.txt");
     // check for comments
     c = getc(score_file);
@@ -251,7 +251,7 @@ int main()
   for (int i=game->map-1; i>=0; i--)
     sum = sum + game->score[i];
   if (game->current_score < sum) {
-    score_file = fopen ("record.txt", "w") ;
+    score_file = fopen ("./resources/record.txt", "w") ;
       fputs("# USER RECORD\n", score_file);
       fprintf (score_file, "%ld", sum);
     fclose (score_file) ;
