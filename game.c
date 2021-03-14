@@ -419,6 +419,8 @@ void draw_map(MAP *map, COORDINATE *hero, GAME *game)
       al_draw_text(font, al_map_rgb_f(1,1,1), (BUFFER_W/4)+10*OBJECT_W, (BUFFER_H/4)+(7.3*OBJECT_H), ALLEGRO_ALIGN_CENTER, "THE TIME IS YOUR ENEMY, GOOD LUCK!");
       al_draw_text(font, al_map_rgb_f(1,1,1), (BUFFER_W/4)+10*OBJECT_W, (BUFFER_H/4)+(10.3*OBJECT_H), ALLEGRO_ALIGN_CENTER, "GAME DEVELOPED BY GUILHERME CARBONARI BONETI");
       al_draw_text(font, al_map_rgb_f(1,1,1), (BUFFER_W/4)+10*OBJECT_W, (BUFFER_H/4)+(11.3*OBJECT_H), ALLEGRO_ALIGN_CENTER, "MARCH, 2021");
+      al_draw_text(font, al_map_rgb_f(1,1,1), OBJECT_W, (BUFFER_H/4)+(15.3*OBJECT_H), 0, "* CHEAT CODE: UP, RIGHT, DOWN, LEFT, LEFT,");
+      al_draw_text(font, al_map_rgb_f(1,1,1), 10.3*OBJECT_W, (BUFFER_H/4)+(16.2*OBJECT_H), 0, "RIGHT, LEFT, UP, LEFT, DOWN");
     }
   }
 
