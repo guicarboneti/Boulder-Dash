@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "allegro_audio.h": "c",
-        "allegro_primitives.h": "c",
-        "stdlib.h": "c"
-    }
-}
